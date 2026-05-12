@@ -1,1 +1,40 @@
+name: GitHub Projects Automation
 
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  move-issue-to-done:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Move Issue to Done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          ISSUE_NUMBER=$(echo "$PR_BODY" | grep -oP '(?i)closes\s+#\K[0-9]+' | head -1)
+
+          if [ -z "$ISSUE_NUMBER" ]; then
+            echo "No linked issue found. Skipping."
+            exit 0
+          fi
+
+          echo "Linked issue: #$ISSUE_NUMBER"
+
+          REPO_OWNER="${{ github.repository_owner }}"
+          REPO_NAME="${{ github.event.repository.name }}"
+
+          curl -s -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            https://api.github.com/graphql \
+            -d "{
+              \"query\": \"query { repository(owner: \\\"$REPO_OWNER\\\", name: \\\"$REPO_NAME\\\") { issue(number: $ISSUE_NUMBER) { projectItems(first: 10) { nodes { id project { id fields(first: 20) { nodes { ... on ProjectV2SingleSelectField { id name options { id name } } } } } } } } } }\"
+            }"
