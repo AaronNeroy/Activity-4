@@ -1,6 +1,6 @@
 name: CI Workflow - Docker
 
-on:
+"on":
   push:
     branches:
       - main
