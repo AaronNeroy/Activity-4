@@ -1,6 +1,6 @@
 name: GitHub Projects Automation
 
-on:
+"on":
   pull_request:
     types:
       - closed
